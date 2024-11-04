@@ -2,7 +2,7 @@ include <BOSL2/std.scad>
 
 // Global resolution
 $fs = 0.1;  // Don't generate smaller facets than 0.1 mm
-$fa = 3;    // Don't generate larger angles than 5 degrees
+$fa = 5;    // Don't generate larger angles than 5 degrees
 
 
 module hex_louver(hex_width, border_thickness) {
@@ -115,6 +115,7 @@ module filter_base(params) {
     }
 }
 
+
 filter_diameter = 120;
 filter_height = 120;
 filter_base_param = ["ring_mount", 70, 44, 2];
@@ -125,8 +126,54 @@ fan_mount="square_fan_mount";
 height=120;
 diameter=max(sqrt(2)*(fan_size+6), filter_diameter*1.1);
 border_thickness=1.2;
-union() {
-    cylinder_with_louvers(height=height, radius=diameter/2, border_thickness=border_thickness, louver_offset=height/5);
-    external_thread(diameter/2, height*0.77, height, 2.5);
-    translate([0,0,border_thickness]) filter_base(filter_base_param);
+
+thread_height=height*0.23;
+module air_purifier_base() {
+    union() {
+        cylinder_with_louvers(height=height, radius=diameter/2, border_thickness=border_thickness, louver_offset=height/5);
+        external_thread(diameter/2, height-thread_height, height, 2.5);
+        translate([0,0,border_thickness]) filter_base(filter_base_param);
+    }
 }
+
+
+
+fan_hole_d = 132;
+fan_mount_hole_distance = 125;
+filter_attach_d_outer = 91;
+filter_attach_d_inner = 88;
+filter_attach_thickness = filter_attach_d_outer-filter_attach_d_inner;
+module fan_to_filter_funnel() {
+    hull() {
+        cylinder(h=0.1,d=fan_hole_d);
+        translate([0,0,(fan_hole_d-filter_attach_d_inner)]) cylinder(h=0.1,d=filter_attach_d_inner);
+    }
+}
+
+top_thickness=2.5; //must be greater than the border_thickness
+translate([0,0,1.5*height]) rotate([180,0,0]) {
+    
+    
+translate([0,0,-top_thickness]) difference() {
+    resize([210,0,0],[true,true,false]) union() {
+        difference() {
+            cylinder(h=thread_height+top_thickness, d=diameter+top_thickness);
+            translate([0,0,top_thickness]) cylinder(h=thread_height+20,d=diameter);
+        }
+        external_thread(diameter/2, top_thickness, thread_height+top_thickness, 2.5);
+    }
+    
+    translate([0,0,0]) cylinder(h=top_thickness,d1=fan_hole_d,d2=fan_hole_d-filter_attach_thickness);
+    
+    translate([fan_mount_hole_distance/2,fan_mount_hole_distance/2,0]) cylinder(h=top_thickness+4,d=4,center=true);
+    translate([fan_mount_hole_distance/2,-fan_mount_hole_distance/2,0]) cylinder(h=top_thickness+4,d=4,center=true);
+    translate([-fan_mount_hole_distance/2,fan_mount_hole_distance/2,0]) cylinder(h=top_thickness+4,d=4,center=true);
+    translate([-fan_mount_hole_distance/2,-fan_mount_hole_distance/2,0]) cylinder(h=top_thickness+4,d=4,center=true);
+}
+
+translate([0,0,-top_thickness]) tube(h=0.66*thread_height,od1=fan_hole_d+filter_attach_thickness,od2=filter_attach_d_outer,wall=filter_attach_thickness*0.7,anchor=[0,0,-1]);
+translate([0,0,0.66*thread_height-top_thickness]) tube(h=0.04*thread_height+top_thickness,od=filter_attach_d_outer-0.3*filter_attach_thickness,id=filter_attach_d_inner+0.3*filter_attach_thickness,anchor=[0,0,-1]);
+
+}
+
+air_purifier_base();
